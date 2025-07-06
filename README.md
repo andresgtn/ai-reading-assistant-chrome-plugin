@@ -36,8 +36,8 @@ A Chrome extension that allows users to highlight text on any webpage and send i
 ### 1. Clone the project
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/gpt-reader-assistant.git
-cd gpt-reader-assistant
+git clone https://github.com/andresgtn/ai-reading-assistant-chrome-plugin.git
+cd ai-reading-assistant-chrome-plugin
 ```
 
 ### 2. Add your API key
