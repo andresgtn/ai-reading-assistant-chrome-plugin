@@ -1,0 +1,30 @@
+# Node / editor noise
+node_modules/
+dist/
+*.log
+
+# Build output (if you add tooling later)
+*.zip
+*.crx
+
+# Fleet / JetBrains
+.idea/
+.fleet/
+.vscode/
+
+# OS trash
+.DS_Store
+Thumbs.db
+
+# Secrets and config
+llm/secrets.js
+.env
+*.key
+*.pem
+
+# Ignore all PNGs except icons
+*.png
+!icons/*.png
+
+# Folder for optional screenshots or mockups
+screenshots/
