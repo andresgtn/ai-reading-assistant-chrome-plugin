@@ -31,6 +31,7 @@ export async function handleCommand(command, tab = null) {
   chrome.tabs.sendMessage(tab.id, { action: "getSelectedText" }, async (res) => {
     if (!res?.text) return;
 
+    chrome.tabs.sendMessage(tab.id, { action: "showLoading" }); // show loading wheel
     const result = await llmCall(res.text, instruction);
 
     chrome.tabs.sendMessage(tab.id, {
