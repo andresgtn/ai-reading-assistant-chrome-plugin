@@ -2,10 +2,12 @@
 // Vercel serverless function that securely forwards chat requests to the OpenRouter API.
 // It prevents exposing your OpenRouter API key by injecting it server-side.
 
-console.log("ENV KEY:", process.env.OPENROUTER_API_KEY ? "loaded" : "MISSING");
-
 
 export default async function handler(req, res) {
+
+  # DEBUG
+  console.log("ENV KEY:", process.env.OPENROUTER_API_KEY ? "loaded" : "MISSING");
+  
   // Allow only POST requests; reject anything else
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
