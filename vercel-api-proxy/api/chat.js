@@ -34,6 +34,14 @@ export default async function handler(req, res) {
       })
     });
 
+    //DEBUG block start
+    const raw = await response.text();
+    console.log("RAW OpenRouter response:", raw);
+    const data = JSON.parse(raw);
+
+    
+    //DEBUG block end
+
     // Parse the JSON response
     const data = await response.json();
 
