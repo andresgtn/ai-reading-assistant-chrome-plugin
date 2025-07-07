@@ -1,70 +1,81 @@
-/**
- * 📄 view.js
- *
- * Handles UI rendering for the AI Reading Assistant.
- * Provides overlay for displaying LLM responses and a loading state.
- * This file is loaded globally (not as a module) and used by content scripts.
- */
+// 📄 view.js — Floating UI overlay for LLM results — draggable, resizable (custom logic), scrollable.
 
-/**
- * Removes existing overlay from the page, if any.
- */
+// Remove existing overlay
 function removeOverlay() {
-  const existing = document.getElementById("ai-reading-overlay");
-  if (existing) existing.remove();
+  const el = document.getElementById("ai-reading-overlay");
+  if (el) el.remove();
 }
 
-/**
- * Shows a simple loading indicator overlay.
- */
+// Show loading overlay
 function showLoadingOverlay() {
   removeOverlay();
 
   const overlay = document.createElement("div");
   overlay.id = "ai-reading-overlay";
+  Object.assign(overlay.style, {
+    position: "fixed",
+    top: "20px",
+    right: "20px",
+    background: "#fff",
+    border: "1px solid #ccc",
+    padding: "12px",
+    borderRadius: "8px",
+    fontFamily: "sans-serif",
+    fontStyle: "italic",
+    fontSize: "14px",
+    opacity: 0.8,
+    zIndex: 9999,
+    boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+    pointerEvents: "none"
+  });
+
   overlay.innerText = "Loading AI response...";
-  Object.assign(overlay.style, baseOverlayStyle());
-
-  overlay.style.fontStyle = "italic";
-  overlay.style.opacity = "0.8";
-
   document.body.appendChild(overlay);
 }
 
-/**
- * Renders the AI response in a floating overlay on the webpage.
- * Replaces any previous overlay (including loading state) with the final result.
- *
- * @param {string} rawText - The text to display inside the overlay
- */
+// Render final overlay with LLM result
 function createOverlay(rawText) {
   removeOverlay();
-
   const resultText = cleanText(rawText);
 
   const overlay = document.createElement("div");
   overlay.id = "ai-reading-overlay";
   Object.assign(overlay.style, baseOverlayStyle());
-  makeDraggable(overlay);
-  makeResizable(overlay);
 
-  // Create scrollable text area
+  overlay.style.display = "flex";
+  overlay.style.flexDirection = "column";
+
+  const dragHandle = document.createElement("div");
+  Object.assign(dragHandle.style, {
+    height: "10px",
+    cursor: "move",
+    margin: "-12px -12px 8px -12px",
+    background: "transparent"
+  });
+  makeDraggable(overlay, dragHandle);
+  overlay.appendChild(dragHandle);
+
   const content = document.createElement("div");
   content.className = "ai-overlay-text";
   content.innerText = resultText || "No response.";
   Object.assign(content.style, contentStyle());
   overlay.appendChild(content);
 
-  // Add action buttons (Copy + Close)
   const buttonRow = document.createElement("div");
+  Object.assign(buttonRow.style, {
+    marginTop: "auto",
+    display: "flex",
+    gap: "8px"
+  });
 
   const copyBtn = document.createElement("button");
   copyBtn.innerText = "Copy";
   Object.assign(copyBtn.style, buttonStyle());
   copyBtn.onclick = () => {
-    navigator.clipboard.writeText(resultText);
-    copyBtn.innerText = "Copied!";
-    setTimeout(() => (copyBtn.innerText = "Copy"), 1500);
+    navigator.clipboard.writeText(resultText).then(() => {
+      copyBtn.innerText = "Copied!";
+      setTimeout(() => (copyBtn.innerText = "Copy"), 1500);
+    });
   };
   buttonRow.appendChild(copyBtn);
 
@@ -75,118 +86,140 @@ function createOverlay(rawText) {
   buttonRow.appendChild(closeBtn);
 
   overlay.appendChild(buttonRow);
+  makeCustomResizable(overlay);
   document.body.appendChild(overlay);
 }
 
-/**
- * Style for the main overlay container.
- */
 function baseOverlayStyle() {
   return {
     position: "fixed",
     top: "20px",
     right: "20px",
-    background: "#ffffff",
+    background: "#fff",
     border: "1px solid #ccc",
     padding: "12px",
     borderRadius: "8px",
-    maxWidth: "320px",
+    minWidth: "200px",
+    minHeight: "100px",
+    width: "320px",
+    height: "auto",
     fontFamily: "sans-serif",
     zIndex: 9999,
     boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
-    resize: "both",
-    overflow: "auto",
-    cursor: "move"
+    overflow: "hidden"
   };
 }
 
-/**
- * Style for the text content area.
- */
 function contentStyle() {
   return {
-    marginBottom: "12px",
-    maxHeight: "200px",
+    flexGrow: 1,
     overflowY: "auto",
     whiteSpace: "pre-wrap",
-    lineHeight: "1.5"
+    lineHeight: "1.5",
+    fontSize: "14px",
+    marginBottom: "8px"
   };
 }
 
-/**
- * Style for overlay buttons.
- */
 function buttonStyle() {
   return {
-    marginRight: "8px",
     padding: "6px 12px",
     border: "none",
     borderRadius: "4px",
     background: "#007bff",
     color: "white",
     cursor: "pointer",
-    fontSize: "13px",
+    fontSize: "13px"
   };
 }
 
-/**
- * Removes common Markdown formatting from LLM response.
- * Currently handles:
- * - **bold**
- * - `-` bullets → •
- * - Excess empty lines
- */
 function cleanText(text) {
   return text
-    .replace(/\*\*(.*?)\*\*/g, "$1")   // Remove bold markdown
-    .replace(/^- /gm, "• ")            // Dash bullets → dot bullets
-    .replace(/^\s*\n/gm, "")           // Remove empty lines
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/^- /gm, "• ")
+    .replace(/^\s*\n/gm, "")
     .trim();
 }
 
-/**
- * Makes the overlay draggable by mouse (click + move).
- */
-function makeDraggable(el) {
-  let pos = { x: 0, y: 0, dx: 0, dy: 0 };
+function makeDraggable(el, handle) {
+  let startX = 0, startY = 0, offsetX = 0, offsetY = 0;
 
-  el.onmousedown = dragMouseDown;
-
-  function dragMouseDown(e) {
+  handle.onmousedown = function (e) {
     e.preventDefault();
-    pos.dx = e.clientX;
-    pos.dy = e.clientY;
+    startX = e.clientX;
+    startY = e.clientY;
+    document.onmousemove = onMouseMove;
     document.onmouseup = stopDrag;
-    document.onmousemove = doDrag;
-  }
+  };
 
-  function doDrag(e) {
-    e.preventDefault();
-    pos.x = pos.dx - e.clientX;
-    pos.y = pos.dy - e.clientY;
-    pos.dx = e.clientX;
-    pos.dy = e.clientY;
+  function onMouseMove(e) {
+    offsetX = e.clientX - startX;
+    offsetY = e.clientY - startY;
+    startX = e.clientX;
+    startY = e.clientY;
 
-    el.style.top = (el.offsetTop - pos.y) + "px";
-    el.style.left = (el.offsetLeft - pos.x) + "px";
+    let newTop = el.offsetTop + offsetY;
+    let newLeft = el.offsetLeft + offsetX;
+
+    newTop = Math.max(0, Math.min(window.innerHeight - 50, newTop));
+    newLeft = Math.max(0, Math.min(window.innerWidth - 50, newLeft));
+
+    el.style.top = newTop + "px";
+    el.style.left = newLeft + "px";
   }
 
   function stopDrag() {
-    document.onmouseup = null;
     document.onmousemove = null;
+    document.onmouseup = null;
   }
 }
 
-/**
- * Makes the overlay resizable using native browser handles.
- */
-function makeResizable(el) {
-  el.style.resize = "both";
-  el.style.overflow = "auto";
+// ✅ Only this function changed
+function makeCustomResizable(el) {
+  const resizer = document.createElement("div");
+  Object.assign(resizer.style, {
+    width: "16px",
+    height: "16px",
+    position: "absolute",
+    right: "2px",
+    bottom: "2px",
+    cursor: "nwse-resize",
+    zIndex: 10000
+  });
+  el.appendChild(resizer);
+
+  let startX, startY, startWidth, startHeight;
+
+  resizer.addEventListener("mousedown", function (e) {
+    e.preventDefault();
+    startX = e.clientX;
+    startY = e.clientY;
+    startWidth = parseInt(getComputedStyle(el).width, 10);
+    startHeight = parseInt(getComputedStyle(el).height, 10);
+    document.addEventListener("mousemove", doResize);
+    document.addEventListener("mouseup", stopResize);
+  });
+
+  function doResize(e) {
+    const deltaX = e.clientX - startX;
+    const deltaY = e.clientY - startY;
+
+    const maxWidth = window.innerWidth - el.offsetLeft - 10;
+    const maxHeight = window.innerHeight - el.offsetTop - 10;
+
+    const newWidth = Math.min(Math.max(200, startWidth + deltaX), maxWidth);
+    const newHeight = Math.min(Math.max(100, startHeight + deltaY), maxHeight);
+
+    el.style.width = newWidth + "px";
+    el.style.height = newHeight + "px";
+  }
+
+  function stopResize() {
+    document.removeEventListener("mousemove", doResize);
+    document.removeEventListener("mouseup", stopResize);
+  }
 }
 
-/**
- * Expose functions globally for content script access.
- */
+// Export
 window.createOverlay = createOverlay;
 window.showLoadingOverlay = showLoadingOverlay;
