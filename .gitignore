@@ -28,3 +28,7 @@ llm/secrets.js
 
 # Folder for optional screenshots or mockups
 screenshots/
+
+# Vercel
+.vercel
+

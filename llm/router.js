@@ -22,7 +22,7 @@ export async function llmCall(text, instruction, providerId = DEFAULT_PROVIDER) 
   }
 
   try {
-    const response = await fetch("https://your-vercel-deployment-url/api/chat", {
+    const response = await fetch("https://ai-reading-proxy-gu715sipn-andres-alguimcoms-projects.vercel.app/api/chat", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
