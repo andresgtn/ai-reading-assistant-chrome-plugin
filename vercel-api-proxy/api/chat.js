@@ -46,17 +46,13 @@ export default async function handler(req, res) {
       return res.status(502).json({ error: "LLM request failed or returned no response." });
     }*/
     // Handle edge cases: malformed response or no content returned
+    // Handle edge cases: malformed response or no content returned
     if (!response.ok || !data.choices || !data.choices[0]?.message?.content) {
       return res.status(502).json({
-        error: "LLM request failed or returned no response.",
-        diagnostics: {
-          status: response.status,
-          ok: response.ok,
-          dataChoices: !!data.choices,
-          messageContent: !!data.choices?.[0]?.message?.content
-        }
+        error: `LLM request failed or returned no response. | response.ok: ${!response.ok} | data.choices: ${!data.choices} | message.content: ${!data.choices?.[0]?.message?.content}`
       });
     }
+
 
     // Return only the assistant's reply as a clean string
     return res.status(200).json({ content: data.choices[0].message.content.trim() });
