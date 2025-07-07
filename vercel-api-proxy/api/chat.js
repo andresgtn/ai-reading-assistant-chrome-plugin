@@ -2,11 +2,8 @@
 // Vercel serverless function that securely forwards chat requests to the OpenRouter API.
 // It prevents exposing your OpenRouter API key by injecting it server-side.
 
-
 export default async function handler(req, res) {
 
-  # DEBUG
-  console.log("ENV KEY:", process.env.OPENROUTER_API_KEY ? "loaded" : "MISSING");
   
   // Allow only POST requests; reject anything else
   if (req.method !== 'POST') {
@@ -43,9 +40,22 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     // Handle edge cases: malformed response or no content returned
+    /**
     if (!response.ok || !data.choices || !data.choices[0]?.message?.content) {
       console.error("OpenRouter API error:", data);
       return res.status(502).json({ error: "LLM request failed or returned no response." });
+    }*/
+    // Handle edge cases: malformed response or no content returned
+    if (!response.ok || !data.choices || !data.choices[0]?.message?.content) {
+      return res.status(502).json({
+        error: "LLM request failed or returned no response.",
+        diagnostics: {
+          status: response.status,
+          ok: response.ok,
+          dataChoices: !!data.choices,
+          messageContent: !!data.choices?.[0]?.message?.content
+        }
+      });
     }
 
     // Return only the assistant's reply as a clean string
