@@ -43,7 +43,7 @@ export default async function handler(req, res) {
     //DEBUG block end
 
     // Parse the JSON response
-    const data = await response.json();
+    //const data = await response.json();
 
     // Handle edge cases: malformed response or no content returned
     if (!response.ok || !data.choices || !data.choices[0]?.message?.content) {
